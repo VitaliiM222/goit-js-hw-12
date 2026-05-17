@@ -2,6 +2,7 @@ import iziToast from 'izitoast';
 import 'izitoast/dist/css/iziToast.min.css';
 
 import { getImagesByQuery } from './js/pixabay-api';
+
 import {
   createGallery,
   clearGallery,
@@ -19,6 +20,8 @@ const loadMoreBtn = document.querySelector('.load-more');
 let currentPage = 1;
 let currentQuery = '';
 let totalHits = 0;
+
+const PER_PAGE = 15;
 
 form.addEventListener('submit', onSearch);
 loadMoreBtn.addEventListener('click', onLoadMore);
@@ -47,6 +50,7 @@ async function onSearch(event) {
       iziToast.error({
         message:
           'Sorry, there are no images matching your search query. Please try again!',
+        position: 'topRight',
       });
 
       return;
@@ -54,12 +58,21 @@ async function onSearch(event) {
 
     createGallery(data.hits);
 
-    if (totalHits > 15) {
+    const totalPages = Math.ceil(totalHits / PER_PAGE);
+
+    if (totalPages > 1) {
       showLoadMoreButton();
+    } else {
+      iziToast.info({
+        message:
+          "We're sorry, but you've reached the end of search results.",
+        position: 'topRight',
+      });
     }
   } catch (error) {
     iziToast.error({
       message: 'Something went wrong!',
+      position: 'topRight',
     });
   } finally {
     hideLoader();
@@ -69,6 +82,7 @@ async function onSearch(event) {
 async function onLoadMore() {
   currentPage += 1;
 
+  hideLoadMoreButton();
   showLoader();
 
   try {
@@ -76,21 +90,23 @@ async function onLoadMore() {
 
     createGallery(data.hits);
 
-    const totalPages = Math.ceil(totalHits / 15);
+    const totalPages = Math.ceil(totalHits / PER_PAGE);
 
     if (currentPage >= totalPages) {
-      hideLoadMoreButton();
-
       iziToast.info({
         message:
           "We're sorry, but you've reached the end of search results.",
+        position: 'topRight',
       });
+    } else {
+      showLoadMoreButton();
     }
 
     smoothScroll();
   } catch (error) {
     iziToast.error({
       message: 'Something went wrong!',
+      position: 'topRight',
     });
   } finally {
     hideLoader();
@@ -98,12 +114,16 @@ async function onLoadMore() {
 }
 
 function smoothScroll() {
-  const card = document
-    .querySelector('.gallery-item')
-    .getBoundingClientRect();
+  const card = document.querySelector('.gallery-item');
+
+  if (!card) {
+    return;
+  }
+
+  const cardHeight = card.getBoundingClientRect().height;
 
   window.scrollBy({
-    top: card.height * 2,
+    top: cardHeight * 2,
     behavior: 'smooth',
   });
 }
